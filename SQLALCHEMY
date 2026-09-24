@@ -1,0 +1,2074 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": [],
+      "authorship_tag": "ABX9TyPWUPSWUzo03T3G7ldXctG4",
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/Teixeiras15-collab/Atividades/blob/main/SQLALCHEMY\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "5f24ab39"
+      },
+      "source": [
+        "## Nível 1: Básico — Configuração e SQL Puro com Segurança\n",
+        "\n",
+        "### Passo 1: Conexão com o Banco de Dados"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "cf82d276",
+        "outputId": "1176286b-4110-4232-f086-242240a79456"
+      },
+      "source": [
+        "from sqlalchemy import create_engine, text\n",
+        "\n",
+        "# Passo 1: Crie a conexão com um banco de dados local\n",
+        "engine = create_engine('sqlite:///sistema_rh.db')\n",
+        "\n",
+        "print(\"Conexão com o banco de dados 'sistema_rh.db' criada com sucesso.\")"
+      ],
+      "execution_count": 1,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Conexão com o banco de dados 'sistema_rh.db' criada com sucesso.\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "4e3a1c38"
+      },
+      "source": [
+        "### Passo 2: Criar a Tabela `funcionarios` com SQL Puro"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "10d0212b",
+        "outputId": "5d6a6b0f-2784-4e76-8bfe-a36d7947c501"
+      },
+      "source": [
+        "# Passo 2: Abra uma transação e utilize a função text() para executar um comando CREATE TABLE\n",
+        "with engine.begin() as conn:\n",
+        "    conn.execute(text(\"\"\"\n",
+        "        CREATE TABLE IF NOT EXISTS funcionarios (\n",
+        "            id INTEGER PRIMARY KEY AUTOINCREMENT,\n",
+        "            nome VARCHAR(100) NOT NULL,\n",
+        "            cargo VARCHAR(100) NOT NULL,\n",
+        "            salario REAL NOT NULL\n",
+        "        )\n",
+        "    \"\"\"))\n",
+        "\n",
+        "print(\"Tabela 'funcionarios' criada com sucesso (se ainda não existia).\")"
+      ],
+      "execution_count": 2,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Tabela 'funcionarios' criada com sucesso (se ainda não existia).\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "dd87d21e"
+      },
+      "source": [
+        "### Passo 3 (Segurança): Inserção Segura de Dados"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "1a31cab7",
+        "outputId": "767b0820-1918-4419-dcaa-ba301d36d40f"
+      },
+      "source": [
+        "import pandas as pd\n",
+        "\n",
+        "# Simular dados de um formulário web\n",
+        "novo_funcionario = {\n",
+        "    'nome': 'João Silva',\n",
+        "    'cargo': 'Desenvolvedor Júnior',\n",
+        "    'salario': 5000.00\n",
+        "}\n",
+        "\n",
+        "# Passo 3: Utilize o comando INSERT passando parâmetros seguros\n",
+        "with engine.begin() as conn:\n",
+        "    conn.execute(text(\"INSERT INTO funcionarios (nome, cargo, salario) VALUES (:nome, :cargo, :salario)\"),\n",
+        "                 novo_funcionario)\n",
+        "\n",
+        "print(\"Novo funcionário inserido com segurança.\")"
+      ],
+      "execution_count": 4,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Novo funcionário inserido com segurança.\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "7cd874d8"
+      },
+      "source": [
+        "#### Pergunta reflexiva: Por que nunca devemos concatenar strings diretamente no SQL (risco de injeção SQL) e como os placeholders resolvem isso?\n",
+        "\n",
+        "**Resposta:**\n",
+        "\n",
+        "1.  **Risco de Injeção SQL:** Concatenar strings diretamente no SQL (por exemplo, `\"INSERT INTO users VALUES ('\" + username + \"', '\" + password + \"')\"`) expõe o sistema a ataques de injeção SQL. Um atacante pode inserir código SQL malicioso na entrada de um formulário (como o nome de usuário), que será executado pelo banco de dados, podendo levar a roubo, alteração ou exclusão de dados.\n",
+        "\n",
+        "2.  **Solução com Placeholders (Parâmetros Seguros):** Os placeholders (como `:nome`, `:cargo` no exemplo acima) resolvem este problema. Em vez de concatenar a entrada do usuário diretamente na string SQL, você define \"lugares\" onde os valores devem ser inseridos. A biblioteca do banco de dados (neste caso, SQLAlchemy) então se encarrega de:\n",
+        "    *   **Escapar Caracteres Especiais:** Garante que quaisquer caracteres especiais na entrada do usuário sejam tratados como dados literais e não como parte do comando SQL.\n",
+        "    *   **Separar Dados de Lógica:** Mantém a consulta SQL e os dados de entrada completamente separados, impedindo que a entrada do usuário altere a estrutura ou a intenção da consulta.\n",
+        "\n",
+        "Isso torna as inserções e outras operações muito mais seguras, pois o banco de dados nunca interpreta a entrada do usuário como comandos SQL, apenas como valores a serem armazenados ou comparados."
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "baa85c21"
+      },
+      "source": [
+        "### Passo 4: Validação da Inserção com Pandas"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 129
+        },
+        "id": "91208b54",
+        "outputId": "68eab508-83a9-476a-d7a1-d6833cb1bc13"
+      },
+      "source": [
+        "# Passo 4: Valide a inserção consultando os dados e retornando como um DataFrame do Pandas\n",
+        "df_funcionarios = pd.read_sql_query(text(\"SELECT * FROM funcionarios\"), con=engine)\n",
+        "display(df_funcionarios)\n",
+        "\n",
+        "print(\"Validação da inserção concluída. Tabela 'funcionarios' exibida.\")"
+      ],
+      "execution_count": 5,
+      "outputs": [
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": [
+              "   id        nome                 cargo  salario\n",
+              "0   1  João Silva  Desenvolvedor Júnior   5000.0\n",
+              "1   2  João Silva  Desenvolvedor Júnior   5000.0"
+            ],
+            "text/html": [
+              "\n",
+              "  <div id=\"df-f9441b24-6c05-4fb0-8508-26ad546d45ec\" class=\"colab-df-container\">\n",
+              "    <div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>id</th>\n",
+              "      <th>nome</th>\n",
+              "      <th>cargo</th>\n",
+              "      <th>salario</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <th>0</th>\n",
+              "      <td>1</td>\n",
+              "      <td>João Silva</td>\n",
+              "      <td>Desenvolvedor Júnior</td>\n",
+              "      <td>5000.0</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>1</th>\n",
+              "      <td>2</td>\n",
+              "      <td>João Silva</td>\n",
+              "      <td>Desenvolvedor Júnior</td>\n",
+              "      <td>5000.0</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "</div>\n",
+              "    <div class=\"colab-df-buttons\">\n",
+              "\n",
+              "  <div class=\"colab-df-container\">\n",
+              "    <button class=\"colab-df-convert\" onclick=\"convertToInteractive('df-f9441b24-6c05-4fb0-8508-26ad546d45ec')\"\n",
+              "            title=\"Convert this dataframe to an interactive table.\"\n",
+              "            style=\"display:none;\">\n",
+              "\n",
+              "  <svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24px\" viewBox=\"0 -960 960 960\">\n",
+              "    <path d=\"M120-120v-720h720v720H120Zm60-500h600v-160H180v160Zm220 220h160v-160H400v160Zm0 220h160v-160H400v160ZM180-400h160v-160H180v160Zm440 0h160v-160H620v160ZM180-180h160v-160H180v160Zm440 0h160v-160H620v160Z\"/>\n",
+              "  </svg>\n",
+              "    </button>\n",
+              "\n",
+              "  <style>\n",
+              "    .colab-df-container {\n",
+              "      display:flex;\n",
+              "      gap: 12px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert {\n",
+              "      background-color: #E8F0FE;\n",
+              "      border: none;\n",
+              "      border-radius: 50%;\n",
+              "      cursor: pointer;\n",
+              "      display: none;\n",
+              "      fill: #1967D2;\n",
+              "      height: 32px;\n",
+              "      padding: 0 0 0 0;\n",
+              "      width: 32px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert:hover {\n",
+              "      background-color: #E2EBFA;\n",
+              "      box-shadow: 0px 1px 2px rgba(60, 64, 67, 0.3), 0px 1px 3px 1px rgba(60, 64, 67, 0.15);\n",
+              "      fill: #174EA6;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-buttons div {\n",
+              "      margin-bottom: 4px;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert {\n",
+              "      background-color: #3B4455;\n",
+              "      fill: #D2E3FC;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert:hover {\n",
+              "      background-color: #434B5C;\n",
+              "      box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.15);\n",
+              "      filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.3));\n",
+              "      fill: #FFFFFF;\n",
+              "    }\n",
+              "  </style>\n",
+              "\n",
+              "    <script>\n",
+              "      const buttonEl =\n",
+              "        document.querySelector('#df-f9441b24-6c05-4fb0-8508-26ad546d45ec button.colab-df-convert');\n",
+              "      buttonEl.style.display =\n",
+              "        google.colab.kernel.accessAllowed ? 'block' : 'none';\n",
+              "\n",
+              "      async function convertToInteractive(key) {\n",
+              "        const element = document.querySelector('#df-f9441b24-6c05-4fb0-8508-26ad546d45ec');\n",
+              "        const dataTable =\n",
+              "          await google.colab.kernel.invokeFunction('convertToInteractive',\n",
+              "                                                    [key], {});\n",
+              "        if (!dataTable) return;\n",
+              "\n",
+              "        const docLinkHtml = 'Like what you see? Visit the ' +\n",
+              "          '<a target=\"_blank\" href=https://colab.research.google.com/notebooks/data_table.ipynb>data table notebook</a>'\n",
+              "          + ' to learn more about interactive tables.';\n",
+              "        element.innerHTML = '';\n",
+              "        dataTable['output_type'] = 'display_data';\n",
+              "        await google.colab.output.renderOutput(dataTable, element);\n",
+              "        const docLink = document.createElement('div');\n",
+              "        docLink.innerHTML = docLinkHtml;\n",
+              "        element.appendChild(docLink);\n",
+              "      }\n",
+              "    </script>\n",
+              "  </div>\n",
+              "\n",
+              "\n",
+              "  <div id=\"id_043c8574-c514-435d-8c26-2d2173592b28\">\n",
+              "    <style>\n",
+              "      .colab-df-generate {\n",
+              "        background-color: #E8F0FE;\n",
+              "        border: none;\n",
+              "        border-radius: 50%;\n",
+              "        cursor: pointer;\n",
+              "        display: none;\n",
+              "        fill: #1967D2;\n",
+              "        height: 32px;\n",
+              "        padding: 0 0 0 0;\n",
+              "        width: 32px;\n",
+              "      }\n",
+              "\n",
+              "      .colab-df-generate:hover {\n",
+              "        background-color: #E2EBFA;\n",
+              "        box-shadow: 0px 1px 2px rgba(60, 64, 67, 0.3), 0px 1px 3px 1px rgba(60, 64, 67, 0.15);\n",
+              "        fill: #174EA6;\n",
+              "      }\n",
+              "\n",
+              "      [theme=dark] .colab-df-generate {\n",
+              "        background-color: #3B4455;\n",
+              "        fill: #D2E3FC;\n",
+              "      }\n",
+              "\n",
+              "      [theme=dark] .colab-df-generate:hover {\n",
+              "        background-color: #434B5C;\n",
+              "        box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.15);\n",
+              "        filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.3));\n",
+              "        fill: #FFFFFF;\n",
+              "      }\n",
+              "    </style>\n",
+              "    <button class=\"colab-df-generate\" onclick=\"generateWithVariable('df_funcionarios')\"\n",
+              "            title=\"Generate code using this dataframe.\"\n",
+              "            style=\"display:none;\">\n",
+              "\n",
+              "  <svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24px\"viewBox=\"0 0 24 24\"\n",
+              "       width=\"24px\">\n",
+              "    <path d=\"M7,19H8.4L18.45,9,17,7.55,7,17.6ZM5,21V16.75L18.45,3.32a2,2,0,0,1,2.83,0l1.4,1.43a1.91,1.91,0,0,1,.58,1.4,1.91,1.91,0,0,1-.58,1.4L9.25,21ZM18.45,9,17,7.55Zm-12,3A5.31,5.31,0,0,0,4.9,8.1,5.31,5.31,0,0,0,1,6.5,5.31,5.31,0,0,0,4.9,4.9,5.31,5.31,0,0,0,6.5,1,5.31,5.31,0,0,0,8.1,4.9,5.31,5.31,0,0,0,12,6.5,5.46,5.46,0,0,0,6.5,12Z\"/>\n",
+              "  </svg>\n",
+              "    </button>\n",
+              "    <script>\n",
+              "      (() => {\n",
+              "      const buttonEl =\n",
+              "        document.querySelector('#id_043c8574-c514-435d-8c26-2d2173592b28 button.colab-df-generate');\n",
+              "      buttonEl.style.display =\n",
+              "        google.colab.kernel.accessAllowed ? 'block' : 'none';\n",
+              "\n",
+              "      buttonEl.onclick = () => {\n",
+              "        google.colab.notebook.generateWithVariable('df_funcionarios');\n",
+              "      }\n",
+              "      })();\n",
+              "    </script>\n",
+              "  </div>\n",
+              "\n",
+              "    </div>\n",
+              "  </div>\n"
+            ],
+            "application/vnd.google.colaboratory.intrinsic+json": {
+              "type": "dataframe",
+              "variable_name": "df_funcionarios",
+              "summary": "{\n  \"name\": \"df_funcionarios\",\n  \"rows\": 2,\n  \"fields\": [\n    {\n      \"column\": \"id\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0,\n        \"min\": 1,\n        \"max\": 2,\n        \"num_unique_values\": 2,\n        \"samples\": [\n          2,\n          1\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"nome\",\n      \"properties\": {\n        \"dtype\": \"string\",\n        \"num_unique_values\": 1,\n        \"samples\": [\n          \"Jo\\u00e3o Silva\"\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"cargo\",\n      \"properties\": {\n        \"dtype\": \"string\",\n        \"num_unique_values\": 1,\n        \"samples\": [\n          \"Desenvolvedor J\\u00fanior\"\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"salario\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.0,\n        \"min\": 5000.0,\n        \"max\": 5000.0,\n        \"num_unique_values\": 1,\n        \"samples\": [\n          5000.0\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    }\n  ]\n}"
+            }
+          },
+          "metadata": {}
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Validação da inserção concluída. Tabela 'funcionarios' exibida.\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "f6ecf645"
+      },
+      "source": [
+        "## Nível 2: Intermediário — SQLAlchemy Core (Automatização Programática)"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "78a19734"
+      },
+      "source": [
+        "### Passo 1: Definir e Criar Tabela `projetos` Programaticamente"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "f41a1a61",
+        "outputId": "bda776d6-219f-430c-8761-89f64360514d"
+      },
+      "source": [
+        "from sqlalchemy import Table, MetaData, Column, Integer, String, Date\n",
+        "\n",
+        "# Defina um objeto MetaData\n",
+        "metadata = MetaData()\n",
+        "\n",
+        "# Passo 1: Defina uma nova tabela chamada projetos de forma programática\n",
+        "projetos = Table(\n",
+        "    'projetos',\n",
+        "    metadata,\n",
+        "    Column('id', Integer, primary_key=True, autoincrement=True),\n",
+        "    Column('nome_projeto', String(100), nullable=False),\n",
+        "    Column('data_inicio', Date),\n",
+        "    Column('data_fim', Date)\n",
+        ")\n",
+        "\n",
+        "# Crie a tabela fisicamente no banco com metadata.create_all(engine)\n",
+        "metadata.create_all(engine)\n",
+        "\n",
+        "print(\"Tabela 'projetos' definida e criada com sucesso.\")"
+      ],
+      "execution_count": 6,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Tabela 'projetos' definida e criada com sucesso.\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "5b6e1620"
+      },
+      "source": [
+        "### Passo 2: Inserção em Lote (Bulk Insert) de Projetos"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 255
+        },
+        "id": "6dee69aa",
+        "outputId": "a0e91bce-87c1-4135-f85a-b7e9292bf140"
+      },
+      "source": [
+        "from sqlalchemy import insert\n",
+        "from datetime import date\n",
+        "\n",
+        "# Lista de dicionários contendo múltiplos projetos\n",
+        "lista_de_projetos = [\n",
+        "    {\n",
+        "        'nome_projeto': 'Desenvolvimento App RH',\n",
+        "        'data_inicio': date(2023, 1, 15),\n",
+        "        'data_fim': date(2023, 6, 30)\n",
+        "    },\n",
+        "    {\n",
+        "        'nome_projeto': 'Migração de Dados Legados',\n",
+        "        'data_inicio': date(2023, 3, 1),\n",
+        "        'data_fim': date(2023, 9, 30)\n",
+        "    },\n",
+        "    {\n",
+        "        'nome_projeto': 'Otimização de Processos Internos',\n",
+        "        'data_inicio': date(2023, 7, 1),\n",
+        "        'data_fim': date(2023, 12, 15)\n",
+        "    }\n",
+        "]\n",
+        "\n",
+        "# Passo 2: Faça uma inserção em lote (bulk insert)\n",
+        "with engine.begin() as conn:\n",
+        "    conn.execute(insert(projetos), lista_de_projetos)\n",
+        "\n",
+        "print(f\"{len(lista_de_projetos)} projetos inseridos com sucesso na tabela 'projetos'.\")\n",
+        "\n",
+        "# Validar a inserção consultando os dados\n",
+        "df_projetos = pd.read_sql_query(text(\"SELECT * FROM projetos\"), con=engine)\n",
+        "display(df_projetos)"
+      ],
+      "execution_count": 8,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "3 projetos inseridos com sucesso na tabela 'projetos'.\n"
+          ]
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": [
+              "   id                      nome_projeto data_inicio    data_fim\n",
+              "0   1            Desenvolvimento App RH  2023-01-15  2023-06-30\n",
+              "1   2         Migração de Dados Legados  2023-03-01  2023-09-30\n",
+              "2   3  Otimização de Processos Internos  2023-07-01  2023-12-15\n",
+              "3   4            Desenvolvimento App RH  2023-01-15  2023-06-30\n",
+              "4   5         Migração de Dados Legados  2023-03-01  2023-09-30\n",
+              "5   6  Otimização de Processos Internos  2023-07-01  2023-12-15"
+            ],
+            "text/html": [
+              "\n",
+              "  <div id=\"df-af2401ef-7d97-4641-9720-1b0e9a8c390d\" class=\"colab-df-container\">\n",
+              "    <div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>id</th>\n",
+              "      <th>nome_projeto</th>\n",
+              "      <th>data_inicio</th>\n",
+              "      <th>data_fim</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <th>0</th>\n",
+              "      <td>1</td>\n",
+              "      <td>Desenvolvimento App RH</td>\n",
+              "      <td>2023-01-15</td>\n",
+              "      <td>2023-06-30</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>1</th>\n",
+              "      <td>2</td>\n",
+              "      <td>Migração de Dados Legados</td>\n",
+              "      <td>2023-03-01</td>\n",
+              "      <td>2023-09-30</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>2</th>\n",
+              "      <td>3</td>\n",
+              "      <td>Otimização de Processos Internos</td>\n",
+              "      <td>2023-07-01</td>\n",
+              "      <td>2023-12-15</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>3</th>\n",
+              "      <td>4</td>\n",
+              "      <td>Desenvolvimento App RH</td>\n",
+              "      <td>2023-01-15</td>\n",
+              "      <td>2023-06-30</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>4</th>\n",
+              "      <td>5</td>\n",
+              "      <td>Migração de Dados Legados</td>\n",
+              "      <td>2023-03-01</td>\n",
+              "      <td>2023-09-30</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>5</th>\n",
+              "      <td>6</td>\n",
+              "      <td>Otimização de Processos Internos</td>\n",
+              "      <td>2023-07-01</td>\n",
+              "      <td>2023-12-15</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "</div>\n",
+              "    <div class=\"colab-df-buttons\">\n",
+              "\n",
+              "  <div class=\"colab-df-container\">\n",
+              "    <button class=\"colab-df-convert\" onclick=\"convertToInteractive('df-af2401ef-7d97-4641-9720-1b0e9a8c390d')\"\n",
+              "            title=\"Convert this dataframe to an interactive table.\"\n",
+              "            style=\"display:none;\">\n",
+              "\n",
+              "  <svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24px\" viewBox=\"0 -960 960 960\">\n",
+              "    <path d=\"M120-120v-720h720v720H120Zm60-500h600v-160H180v160Zm220 220h160v-160H400v160Zm0 220h160v-160H400v160ZM180-400h160v-160H180v160Zm440 0h160v-160H620v160ZM180-180h160v-160H180v160Zm440 0h160v-160H620v160Z\"/>\n",
+              "  </svg>\n",
+              "    </button>\n",
+              "\n",
+              "  <style>\n",
+              "    .colab-df-container {\n",
+              "      display:flex;\n",
+              "      gap: 12px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert {\n",
+              "      background-color: #E8F0FE;\n",
+              "      border: none;\n",
+              "      border-radius: 50%;\n",
+              "      cursor: pointer;\n",
+              "      display: none;\n",
+              "      fill: #1967D2;\n",
+              "      height: 32px;\n",
+              "      padding: 0 0 0 0;\n",
+              "      width: 32px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert:hover {\n",
+              "      background-color: #E2EBFA;\n",
+              "      box-shadow: 0px 1px 2px rgba(60, 64, 67, 0.3), 0px 1px 3px 1px rgba(60, 64, 67, 0.15);\n",
+              "      fill: #174EA6;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-buttons div {\n",
+              "      margin-bottom: 4px;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert {\n",
+              "      background-color: #3B4455;\n",
+              "      fill: #D2E3FC;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert:hover {\n",
+              "      background-color: #434B5C;\n",
+              "      box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.15);\n",
+              "      filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.3));\n",
+              "      fill: #FFFFFF;\n",
+              "    }\n",
+              "  </style>\n",
+              "\n",
+              "    <script>\n",
+              "      const buttonEl =\n",
+              "        document.querySelector('#df-af2401ef-7d97-4641-9720-1b0e9a8c390d button.colab-df-convert');\n",
+              "      buttonEl.style.display =\n",
+              "        google.colab.kernel.accessAllowed ? 'block' : 'none';\n",
+              "\n",
+              "      async function convertToInteractive(key) {\n",
+              "        const element = document.querySelector('#df-af2401ef-7d97-4641-9720-1b0e9a8c390d');\n",
+              "        const dataTable =\n",
+              "          await google.colab.kernel.invokeFunction('convertToInteractive',\n",
+              "                                                    [key], {});\n",
+              "        if (!dataTable) return;\n",
+              "\n",
+              "        const docLinkHtml = 'Like what you see? Visit the ' +\n",
+              "          '<a target=\"_blank\" href=https://colab.research.google.com/notebooks/data_table.ipynb>data table notebook</a>'\n",
+              "          + ' to learn more about interactive tables.';\n",
+              "        element.innerHTML = '';\n",
+              "        dataTable['output_type'] = 'display_data';\n",
+              "        await google.colab.output.renderOutput(dataTable, element);\n",
+              "        const docLink = document.createElement('div');\n",
+              "        docLink.innerHTML = docLinkHtml;\n",
+              "        element.appendChild(docLink);\n",
+              "      }\n",
+              "    </script>\n",
+              "  </div>\n",
+              "\n",
+              "\n",
+              "  <div id=\"id_ab1dd17c-00be-4a56-bfc2-485a9055186c\">\n",
+              "    <style>\n",
+              "      .colab-df-generate {\n",
+              "        background-color: #E8F0FE;\n",
+              "        border: none;\n",
+              "        border-radius: 50%;\n",
+              "        cursor: pointer;\n",
+              "        display: none;\n",
+              "        fill: #1967D2;\n",
+              "        height: 32px;\n",
+              "        padding: 0 0 0 0;\n",
+              "        width: 32px;\n",
+              "      }\n",
+              "\n",
+              "      .colab-df-generate:hover {\n",
+              "        background-color: #E2EBFA;\n",
+              "        box-shadow: 0px 1px 2px rgba(60, 64, 67, 0.3), 0px 1px 3px 1px rgba(60, 64, 67, 0.15);\n",
+              "        fill: #174EA6;\n",
+              "      }\n",
+              "\n",
+              "      [theme=dark] .colab-df-generate {\n",
+              "        background-color: #3B4455;\n",
+              "        fill: #D2E3FC;\n",
+              "      }\n",
+              "\n",
+              "      [theme=dark] .colab-df-generate:hover {\n",
+              "        background-color: #434B5C;\n",
+              "        box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.15);\n",
+              "        filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.3));\n",
+              "        fill: #FFFFFF;\n",
+              "      }\n",
+              "    </style>\n",
+              "    <button class=\"colab-df-generate\" onclick=\"generateWithVariable('df_projetos')\"\n",
+              "            title=\"Generate code using this dataframe.\"\n",
+              "            style=\"display:none;\">\n",
+              "\n",
+              "  <svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24px\"viewBox=\"0 0 24 24\"\n",
+              "       width=\"24px\">\n",
+              "    <path d=\"M7,19H8.4L18.45,9,17,7.55,7,17.6ZM5,21V16.75L18.45,3.32a2,2,0,0,1,2.83,0l1.4,1.43a1.91,1.91,0,0,1,.58,1.4,1.91,1.91,0,0,1-.58,1.4L9.25,21ZM18.45,9,17,7.55Zm-12,3A5.31,5.31,0,0,0,4.9,8.1,5.31,5.31,0,0,0,1,6.5,5.31,5.31,0,0,0,4.9,4.9,5.31,5.31,0,0,0,6.5,1,5.31,5.31,0,0,0,8.1,4.9,5.31,5.31,0,0,0,12,6.5,5.46,5.46,0,0,0,6.5,12Z\"/>\n",
+              "  </svg>\n",
+              "    </button>\n",
+              "    <script>\n",
+              "      (() => {\n",
+              "      const buttonEl =\n",
+              "        document.querySelector('#id_ab1dd17c-00be-4a56-bfc2-485a9055186c button.colab-df-generate');\n",
+              "      buttonEl.style.display =\n",
+              "        google.colab.kernel.accessAllowed ? 'block' : 'none';\n",
+              "\n",
+              "      buttonEl.onclick = () => {\n",
+              "        google.colab.notebook.generateWithVariable('df_projetos');\n",
+              "      }\n",
+              "      })();\n",
+              "    </script>\n",
+              "  </div>\n",
+              "\n",
+              "    </div>\n",
+              "  </div>\n"
+            ],
+            "application/vnd.google.colaboratory.intrinsic+json": {
+              "type": "dataframe",
+              "variable_name": "df_projetos",
+              "summary": "{\n  \"name\": \"df_projetos\",\n  \"rows\": 6,\n  \"fields\": [\n    {\n      \"column\": \"id\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 1,\n        \"min\": 1,\n        \"max\": 6,\n        \"num_unique_values\": 6,\n        \"samples\": [\n          1,\n          2,\n          6\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"nome_projeto\",\n      \"properties\": {\n        \"dtype\": \"string\",\n        \"num_unique_values\": 3,\n        \"samples\": [\n          \"Desenvolvimento App RH\",\n          \"Migra\\u00e7\\u00e3o de Dados Legados\",\n          \"Otimiza\\u00e7\\u00e3o de Processos Internos\"\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"data_inicio\",\n      \"properties\": {\n        \"dtype\": \"object\",\n        \"num_unique_values\": 3,\n        \"samples\": [\n          \"2023-01-15\",\n          \"2023-03-01\",\n          \"2023-07-01\"\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"data_fim\",\n      \"properties\": {\n        \"dtype\": \"object\",\n        \"num_unique_values\": 3,\n        \"samples\": [\n          \"2023-06-30\",\n          \"2023-09-30\",\n          \"2023-12-15\"\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    }\n  ]\n}"
+            }
+          },
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "3dd6b0d0"
+      },
+      "source": [
+        "### Passo 3: Reajuste Salarial com `update`"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 259
+        },
+        "id": "fc98ce2d",
+        "outputId": "c68dfe15-dcc3-40fc-8b54-7e02c2108cf7"
+      },
+      "source": [
+        "from sqlalchemy import update\n",
+        "\n",
+        "# Ensure 'metadata' object knows about 'funcionarios' table\n",
+        "# This is necessary because 'funcionarios' was created via raw SQL earlier,\n",
+        "# and not programmatically defined using the current 'metadata' object.\n",
+        "metadata.reflect(bind=engine)\n",
+        "\n",
+        "# Exibir a tabela antes do reajuste para comparação\n",
+        "print(\"Tabela 'funcionarios' antes do reajuste:\")\n",
+        "df_funcionarios_antes = pd.read_sql_query(text(\"SELECT * FROM funcionarios\"), con=engine)\n",
+        "display(df_funcionarios_antes)\n",
+        "\n",
+        "# Passo 3: Aumentar o salário apenas dos funcionários que ocupam o cargo de 'Desenvolvedor Júnior'\n",
+        "with engine.begin() as conn:\n",
+        "    stmt = (update(metadata.tables['funcionarios']).\n",
+        "           where(metadata.tables['funcionarios'].c.cargo == 'Desenvolvedor Júnior').\n",
+        "           values(salario=metadata.tables['funcionarios'].c.salario * 1.10)) # Aumento de 10%\n",
+        "    conn.execute(stmt)\n",
+        "\n",
+        "print(\"Salários dos 'Desenvolvedor Júnior' reajustados com sucesso (10% de aumento).\")\n",
+        "\n",
+        "# Validar o reajuste consultando os dados novamente\n",
+        "print(\"Tabela 'funcionarios' depois do reajuste:\")\n",
+        "df_funcionarios_depois = pd.read_sql_query(text(\"SELECT * FROM funcionarios\"), con=engine)\n",
+        "display(df_funcionarios_depois)"
+      ],
+      "execution_count": 12,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Tabela 'funcionarios' antes do reajuste:\n"
+          ]
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": [
+              "   id        nome                 cargo  salario\n",
+              "0   1  João Silva  Desenvolvedor Júnior   5000.0\n",
+              "1   2  João Silva  Desenvolvedor Júnior   5000.0"
+            ],
+            "text/html": [
+              "\n",
+              "  <div id=\"df-32576fc5-39ae-4594-bb79-c1024e406441\" class=\"colab-df-container\">\n",
+              "    <div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>id</th>\n",
+              "      <th>nome</th>\n",
+              "      <th>cargo</th>\n",
+              "      <th>salario</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <th>0</th>\n",
+              "      <td>1</td>\n",
+              "      <td>João Silva</td>\n",
+              "      <td>Desenvolvedor Júnior</td>\n",
+              "      <td>5000.0</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>1</th>\n",
+              "      <td>2</td>\n",
+              "      <td>João Silva</td>\n",
+              "      <td>Desenvolvedor Júnior</td>\n",
+              "      <td>5000.0</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "</div>\n",
+              "    <div class=\"colab-df-buttons\">\n",
+              "\n",
+              "  <div class=\"colab-df-container\">\n",
+              "    <button class=\"colab-df-convert\" onclick=\"convertToInteractive('df-32576fc5-39ae-4594-bb79-c1024e406441')\"\n",
+              "            title=\"Convert this dataframe to an interactive table.\"\n",
+              "            style=\"display:none;\">\n",
+              "\n",
+              "  <svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24px\" viewBox=\"0 -960 960 960\">\n",
+              "    <path d=\"M120-120v-720h720v720H120Zm60-500h600v-160H180v160Zm220 220h160v-160H400v160Zm0 220h160v-160H400v160ZM180-400h160v-160H180v160Zm440 0h160v-160H620v160ZM180-180h160v-160H180v160Zm440 0h160v-160H620v160Z\"/>\n",
+              "  </svg>\n",
+              "    </button>\n",
+              "\n",
+              "  <style>\n",
+              "    .colab-df-container {\n",
+              "      display:flex;\n",
+              "      gap: 12px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert {\n",
+              "      background-color: #E8F0FE;\n",
+              "      border: none;\n",
+              "      border-radius: 50%;\n",
+              "      cursor: pointer;\n",
+              "      display: none;\n",
+              "      fill: #1967D2;\n",
+              "      height: 32px;\n",
+              "      padding: 0 0 0 0;\n",
+              "      width: 32px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert:hover {\n",
+              "      background-color: #E2EBFA;\n",
+              "      box-shadow: 0px 1px 2px rgba(60, 64, 67, 0.3), 0px 1px 3px 1px rgba(60, 64, 67, 0.15);\n",
+              "      fill: #174EA6;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-buttons div {\n",
+              "      margin-bottom: 4px;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert {\n",
+              "      background-color: #3B4455;\n",
+              "      fill: #D2E3FC;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert:hover {\n",
+              "      background-color: #434B5C;\n",
+              "      box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.15);\n",
+              "      filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.3));\n",
+              "      fill: #FFFFFF;\n",
+              "    }\n",
+              "  </style>\n",
+              "\n",
+              "    <script>\n",
+              "      const buttonEl =\n",
+              "        document.querySelector('#df-32576fc5-39ae-4594-bb79-c1024e406441 button.colab-df-convert');\n",
+              "      buttonEl.style.display =\n",
+              "        google.colab.kernel.accessAllowed ? 'block' : 'none';\n",
+              "\n",
+              "      async function convertToInteractive(key) {\n",
+              "        const element = document.querySelector('#df-32576fc5-39ae-4594-bb79-c1024e406441');\n",
+              "        const dataTable =\n",
+              "          await google.colab.kernel.invokeFunction('convertToInteractive',\n",
+              "                                                    [key], {});\n",
+              "        if (!dataTable) return;\n",
+              "\n",
+              "        const docLinkHtml = 'Like what you see? Visit the ' +\n",
+              "          '<a target=\"_blank\" href=https://colab.research.google.com/notebooks/data_table.ipynb>data table notebook</a>'\n",
+              "          + ' to learn more about interactive tables.';\n",
+              "        element.innerHTML = '';\n",
+              "        dataTable['output_type'] = 'display_data';\n",
+              "        await google.colab.output.renderOutput(dataTable, element);\n",
+              "        const docLink = document.createElement('div');\n",
+              "        docLink.innerHTML = docLinkHtml;\n",
+              "        element.appendChild(docLink);\n",
+              "      }\n",
+              "    </script>\n",
+              "  </div>\n",
+              "\n",
+              "\n",
+              "  <div id=\"id_a718be0e-3408-4758-8f55-e87a1c591062\">\n",
+              "    <style>\n",
+              "      .colab-df-generate {\n",
+              "        background-color: #E8F0FE;\n",
+              "        border: none;\n",
+              "        border-radius: 50%;\n",
+              "        cursor: pointer;\n",
+              "        display: none;\n",
+              "        fill: #1967D2;\n",
+              "        height: 32px;\n",
+              "        padding: 0 0 0 0;\n",
+              "        width: 32px;\n",
+              "      }\n",
+              "\n",
+              "      .colab-df-generate:hover {\n",
+              "        background-color: #E2EBFA;\n",
+              "        box-shadow: 0px 1px 2px rgba(60, 64, 67, 0.3), 0px 1px 3px 1px rgba(60, 64, 67, 0.15);\n",
+              "        fill: #174EA6;\n",
+              "      }\n",
+              "\n",
+              "      [theme=dark] .colab-df-generate {\n",
+              "        background-color: #3B4455;\n",
+              "        fill: #D2E3FC;\n",
+              "      }\n",
+              "\n",
+              "      [theme=dark] .colab-df-generate:hover {\n",
+              "        background-color: #434B5C;\n",
+              "        box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.15);\n",
+              "        filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.3));\n",
+              "        fill: #FFFFFF;\n",
+              "      }\n",
+              "    </style>\n",
+              "    <button class=\"colab-df-generate\" onclick=\"generateWithVariable('df_funcionarios_antes')\"\n",
+              "            title=\"Generate code using this dataframe.\"\n",
+              "            style=\"display:none;\">\n",
+              "\n",
+              "  <svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24px\"viewBox=\"0 0 24 24\"\n",
+              "       width=\"24px\">\n",
+              "    <path d=\"M7,19H8.4L18.45,9,17,7.55,7,17.6ZM5,21V16.75L18.45,3.32a2,2,0,0,1,2.83,0l1.4,1.43a1.91,1.91,0,0,1,.58,1.4,1.91,1.91,0,0,1-.58,1.4L9.25,21ZM18.45,9,17,7.55Zm-12,3A5.31,5.31,0,0,0,4.9,8.1,5.31,5.31,0,0,0,1,6.5,5.31,5.31,0,0,0,4.9,4.9,5.31,5.31,0,0,0,6.5,1,5.31,5.31,0,0,0,8.1,4.9,5.31,5.31,0,0,0,12,6.5,5.46,5.46,0,0,0,6.5,12Z\"/>\n",
+              "  </svg>\n",
+              "    </button>\n",
+              "    <script>\n",
+              "      (() => {\n",
+              "      const buttonEl =\n",
+              "        document.querySelector('#id_a718be0e-3408-4758-8f55-e87a1c591062 button.colab-df-generate');\n",
+              "      buttonEl.style.display =\n",
+              "        google.colab.kernel.accessAllowed ? 'block' : 'none';\n",
+              "\n",
+              "      buttonEl.onclick = () => {\n",
+              "        google.colab.notebook.generateWithVariable('df_funcionarios_antes');\n",
+              "      }\n",
+              "      })();\n",
+              "    </script>\n",
+              "  </div>\n",
+              "\n",
+              "    </div>\n",
+              "  </div>\n"
+            ],
+            "application/vnd.google.colaboratory.intrinsic+json": {
+              "type": "dataframe",
+              "variable_name": "df_funcionarios_antes",
+              "summary": "{\n  \"name\": \"df_funcionarios_antes\",\n  \"rows\": 2,\n  \"fields\": [\n    {\n      \"column\": \"id\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0,\n        \"min\": 1,\n        \"max\": 2,\n        \"num_unique_values\": 2,\n        \"samples\": [\n          2,\n          1\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"nome\",\n      \"properties\": {\n        \"dtype\": \"string\",\n        \"num_unique_values\": 1,\n        \"samples\": [\n          \"Jo\\u00e3o Silva\"\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"cargo\",\n      \"properties\": {\n        \"dtype\": \"string\",\n        \"num_unique_values\": 1,\n        \"samples\": [\n          \"Desenvolvedor J\\u00fanior\"\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"salario\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.0,\n        \"min\": 5000.0,\n        \"max\": 5000.0,\n        \"num_unique_values\": 1,\n        \"samples\": [\n          5000.0\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    }\n  ]\n}"
+            }
+          },
+          "metadata": {}
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Salários dos 'Desenvolvedor Júnior' reajustados com sucesso (10% de aumento).\n",
+            "Tabela 'funcionarios' depois do reajuste:\n"
+          ]
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": [
+              "   id        nome                 cargo  salario\n",
+              "0   1  João Silva  Desenvolvedor Júnior   5500.0\n",
+              "1   2  João Silva  Desenvolvedor Júnior   5500.0"
+            ],
+            "text/html": [
+              "\n",
+              "  <div id=\"df-ae2e7944-855e-43b8-abc9-1f1be35ec96e\" class=\"colab-df-container\">\n",
+              "    <div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>id</th>\n",
+              "      <th>nome</th>\n",
+              "      <th>cargo</th>\n",
+              "      <th>salario</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <th>0</th>\n",
+              "      <td>1</td>\n",
+              "      <td>João Silva</td>\n",
+              "      <td>Desenvolvedor Júnior</td>\n",
+              "      <td>5500.0</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>1</th>\n",
+              "      <td>2</td>\n",
+              "      <td>João Silva</td>\n",
+              "      <td>Desenvolvedor Júnior</td>\n",
+              "      <td>5500.0</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "</div>\n",
+              "    <div class=\"colab-df-buttons\">\n",
+              "\n",
+              "  <div class=\"colab-df-container\">\n",
+              "    <button class=\"colab-df-convert\" onclick=\"convertToInteractive('df-ae2e7944-855e-43b8-abc9-1f1be35ec96e')\"\n",
+              "            title=\"Convert this dataframe to an interactive table.\"\n",
+              "            style=\"display:none;\">\n",
+              "\n",
+              "  <svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24px\" viewBox=\"0 -960 960 960\">\n",
+              "    <path d=\"M120-120v-720h720v720H120Zm60-500h600v-160H180v160Zm220 220h160v-160H400v160Zm0 220h160v-160H400v160ZM180-400h160v-160H180v160Zm440 0h160v-160H620v160ZM180-180h160v-160H180v160Zm440 0h160v-160H620v160Z\"/>\n",
+              "  </svg>\n",
+              "    </button>\n",
+              "\n",
+              "  <style>\n",
+              "    .colab-df-container {\n",
+              "      display:flex;\n",
+              "      gap: 12px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert {\n",
+              "      background-color: #E8F0FE;\n",
+              "      border: none;\n",
+              "      border-radius: 50%;\n",
+              "      cursor: pointer;\n",
+              "      display: none;\n",
+              "      fill: #1967D2;\n",
+              "      height: 32px;\n",
+              "      padding: 0 0 0 0;\n",
+              "      width: 32px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert:hover {\n",
+              "      background-color: #E2EBFA;\n",
+              "      box-shadow: 0px 1px 2px rgba(60, 64, 67, 0.3), 0px 1px 3px 1px rgba(60, 64, 67, 0.15);\n",
+              "      fill: #174EA6;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-buttons div {\n",
+              "      margin-bottom: 4px;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert {\n",
+              "      background-color: #3B4455;\n",
+              "      fill: #D2E3FC;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert:hover {\n",
+              "      background-color: #434B5C;\n",
+              "      box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.15);\n",
+              "      filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.3));\n",
+              "      fill: #FFFFFF;\n",
+              "    }\n",
+              "  </style>\n",
+              "\n",
+              "    <script>\n",
+              "      const buttonEl =\n",
+              "        document.querySelector('#df-ae2e7944-855e-43b8-abc9-1f1be35ec96e button.colab-df-convert');\n",
+              "      buttonEl.style.display =\n",
+              "        google.colab.kernel.accessAllowed ? 'block' : 'none';\n",
+              "\n",
+              "      async function convertToInteractive(key) {\n",
+              "        const element = document.querySelector('#df-ae2e7944-855e-43b8-abc9-1f1be35ec96e');\n",
+              "        const dataTable =\n",
+              "          await google.colab.kernel.invokeFunction('convertToInteractive',\n",
+              "                                                    [key], {});\n",
+              "        if (!dataTable) return;\n",
+              "\n",
+              "        const docLinkHtml = 'Like what you see? Visit the ' +\n",
+              "          '<a target=\"_blank\" href=https://colab.research.google.com/notebooks/data_table.ipynb>data table notebook</a>'\n",
+              "          + ' to learn more about interactive tables.';\n",
+              "        element.innerHTML = '';\n",
+              "        dataTable['output_type'] = 'display_data';\n",
+              "        await google.colab.output.renderOutput(dataTable, element);\n",
+              "        const docLink = document.createElement('div');\n",
+              "        docLink.innerHTML = docLinkHtml;\n",
+              "        element.appendChild(docLink);\n",
+              "      }\n",
+              "    </script>\n",
+              "  </div>\n",
+              "\n",
+              "\n",
+              "  <div id=\"id_01476c4b-6747-4511-9294-bcbf9319b103\">\n",
+              "    <style>\n",
+              "      .colab-df-generate {\n",
+              "        background-color: #E8F0FE;\n",
+              "        border: none;\n",
+              "        border-radius: 50%;\n",
+              "        cursor: pointer;\n",
+              "        display: none;\n",
+              "        fill: #1967D2;\n",
+              "        height: 32px;\n",
+              "        padding: 0 0 0 0;\n",
+              "        width: 32px;\n",
+              "      }\n",
+              "\n",
+              "      .colab-df-generate:hover {\n",
+              "        background-color: #E2EBFA;\n",
+              "        box-shadow: 0px 1px 2px rgba(60, 64, 67, 0.3), 0px 1px 3px 1px rgba(60, 64, 67, 0.15);\n",
+              "        fill: #174EA6;\n",
+              "      }\n",
+              "\n",
+              "      [theme=dark] .colab-df-generate {\n",
+              "        background-color: #3B4455;\n",
+              "        fill: #D2E3FC;\n",
+              "      }\n",
+              "\n",
+              "      [theme=dark] .colab-df-generate:hover {\n",
+              "        background-color: #434B5C;\n",
+              "        box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.15);\n",
+              "        filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.3));\n",
+              "        fill: #FFFFFF;\n",
+              "      }\n",
+              "    </style>\n",
+              "    <button class=\"colab-df-generate\" onclick=\"generateWithVariable('df_funcionarios_depois')\"\n",
+              "            title=\"Generate code using this dataframe.\"\n",
+              "            style=\"display:none;\">\n",
+              "\n",
+              "  <svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24px\"viewBox=\"0 0 24 24\"\n",
+              "       width=\"24px\">\n",
+              "    <path d=\"M7,19H8.4L18.45,9,17,7.55,7,17.6ZM5,21V16.75L18.45,3.32a2,2,0,0,1,2.83,0l1.4,1.43a1.91,1.91,0,0,1,.58,1.4,1.91,1.91,0,0,1-.58,1.4L9.25,21ZM18.45,9,17,7.55Zm-12,3A5.31,5.31,0,0,0,4.9,8.1,5.31,5.31,0,0,0,1,6.5,5.31,5.31,0,0,0,4.9,4.9,5.31,5.31,0,0,0,6.5,1,5.31,5.31,0,0,0,8.1,4.9,5.31,5.31,0,0,0,12,6.5,5.46,5.46,0,0,0,6.5,12Z\"/>\n",
+              "  </svg>\n",
+              "    </button>\n",
+              "    <script>\n",
+              "      (() => {\n",
+              "      const buttonEl =\n",
+              "        document.querySelector('#id_01476c4b-6747-4511-9294-bcbf9319b103 button.colab-df-generate');\n",
+              "      buttonEl.style.display =\n",
+              "        google.colab.kernel.accessAllowed ? 'block' : 'none';\n",
+              "\n",
+              "      buttonEl.onclick = () => {\n",
+              "        google.colab.notebook.generateWithVariable('df_funcionarios_depois');\n",
+              "      }\n",
+              "      })();\n",
+              "    </script>\n",
+              "  </div>\n",
+              "\n",
+              "    </div>\n",
+              "  </div>\n"
+            ],
+            "application/vnd.google.colaboratory.intrinsic+json": {
+              "type": "dataframe",
+              "variable_name": "df_funcionarios_depois",
+              "summary": "{\n  \"name\": \"df_funcionarios_depois\",\n  \"rows\": 2,\n  \"fields\": [\n    {\n      \"column\": \"id\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0,\n        \"min\": 1,\n        \"max\": 2,\n        \"num_unique_values\": 2,\n        \"samples\": [\n          2,\n          1\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"nome\",\n      \"properties\": {\n        \"dtype\": \"string\",\n        \"num_unique_values\": 1,\n        \"samples\": [\n          \"Jo\\u00e3o Silva\"\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"cargo\",\n      \"properties\": {\n        \"dtype\": \"string\",\n        \"num_unique_values\": 1,\n        \"samples\": [\n          \"Desenvolvedor J\\u00fanior\"\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"salario\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": 0.0,\n        \"min\": 5500.0,\n        \"max\": 5500.0,\n        \"num_unique_values\": 1,\n        \"samples\": [\n          5500.0\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    }\n  ]\n}"
+            }
+          },
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "72b4446a"
+      },
+      "source": [
+        "### Passo 4: Relatório Salarial Agregado por Cargo"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 106
+        },
+        "id": "b888db68",
+        "outputId": "6b7cbc7b-f25a-4827-ac4e-e976682fc6bf"
+      },
+      "source": [
+        "from sqlalchemy import select, func\n",
+        "\n",
+        "# Passo 4: Construa um select combinando func.avg() e group_by() para calcular a média salarial por cargo\n",
+        "with engine.connect() as conn:\n",
+        "    stmt = (select(\n",
+        "        metadata.tables['funcionarios'].c.cargo,\n",
+        "        func.avg(metadata.tables['funcionarios'].c.salario).label('media_salario')\n",
+        "    ).\n",
+        "    group_by(metadata.tables['funcionarios'].c.cargo))\n",
+        "\n",
+        "    # Execute a consulta e obtenha os resultados\n",
+        "    result = conn.execute(stmt)\n",
+        "\n",
+        "    # Transformar os resultados em um DataFrame Pandas para melhor visualização\n",
+        "    df_relatorio_salarial = pd.DataFrame(result.fetchall(), columns=result.keys())\n",
+        "\n",
+        "print(\"Relatório salarial agregado por cargo:\")\n",
+        "display(df_relatorio_salarial)"
+      ],
+      "execution_count": 14,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Relatório salarial agregado por cargo:\n"
+          ]
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": [
+              "                  cargo  media_salario\n",
+              "0  Desenvolvedor Júnior         5500.0"
+            ],
+            "text/html": [
+              "\n",
+              "  <div id=\"df-cf4180f2-c581-48ee-bbe5-76e645976514\" class=\"colab-df-container\">\n",
+              "    <div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>cargo</th>\n",
+              "      <th>media_salario</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <th>0</th>\n",
+              "      <td>Desenvolvedor Júnior</td>\n",
+              "      <td>5500.0</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "</div>\n",
+              "    <div class=\"colab-df-buttons\">\n",
+              "\n",
+              "  <div class=\"colab-df-container\">\n",
+              "    <button class=\"colab-df-convert\" onclick=\"convertToInteractive('df-cf4180f2-c581-48ee-bbe5-76e645976514')\"\n",
+              "            title=\"Convert this dataframe to an interactive table.\"\n",
+              "            style=\"display:none;\">\n",
+              "\n",
+              "  <svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24px\" viewBox=\"0 -960 960 960\">\n",
+              "    <path d=\"M120-120v-720h720v720H120Zm60-500h600v-160H180v160Zm220 220h160v-160H400v160Zm0 220h160v-160H400v160ZM180-400h160v-160H180v160Zm440 0h160v-160H620v160ZM180-180h160v-160H180v160Zm440 0h160v-160H620v160Z\"/>\n",
+              "  </svg>\n",
+              "    </button>\n",
+              "\n",
+              "  <style>\n",
+              "    .colab-df-container {\n",
+              "      display:flex;\n",
+              "      gap: 12px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert {\n",
+              "      background-color: #E8F0FE;\n",
+              "      border: none;\n",
+              "      border-radius: 50%;\n",
+              "      cursor: pointer;\n",
+              "      display: none;\n",
+              "      fill: #1967D2;\n",
+              "      height: 32px;\n",
+              "      padding: 0 0 0 0;\n",
+              "      width: 32px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert:hover {\n",
+              "      background-color: #E2EBFA;\n",
+              "      box-shadow: 0px 1px 2px rgba(60, 64, 67, 0.3), 0px 1px 3px 1px rgba(60, 64, 67, 0.15);\n",
+              "      fill: #174EA6;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-buttons div {\n",
+              "      margin-bottom: 4px;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert {\n",
+              "      background-color: #3B4455;\n",
+              "      fill: #D2E3FC;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert:hover {\n",
+              "      background-color: #434B5C;\n",
+              "      box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.15);\n",
+              "      filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.3));\n",
+              "      fill: #FFFFFF;\n",
+              "    }\n",
+              "  </style>\n",
+              "\n",
+              "    <script>\n",
+              "      const buttonEl =\n",
+              "        document.querySelector('#df-cf4180f2-c581-48ee-bbe5-76e645976514 button.colab-df-convert');\n",
+              "      buttonEl.style.display =\n",
+              "        google.colab.kernel.accessAllowed ? 'block' : 'none';\n",
+              "\n",
+              "      async function convertToInteractive(key) {\n",
+              "        const element = document.querySelector('#df-cf4180f2-c581-48ee-bbe5-76e645976514');\n",
+              "        const dataTable =\n",
+              "          await google.colab.kernel.invokeFunction('convertToInteractive',\n",
+              "                                                    [key], {});\n",
+              "        if (!dataTable) return;\n",
+              "\n",
+              "        const docLinkHtml = 'Like what you see? Visit the ' +\n",
+              "          '<a target=\"_blank\" href=https://colab.research.google.com/notebooks/data_table.ipynb>data table notebook</a>'\n",
+              "          + ' to learn more about interactive tables.';\n",
+              "        element.innerHTML = '';\n",
+              "        dataTable['output_type'] = 'display_data';\n",
+              "        await google.colab.output.renderOutput(dataTable, element);\n",
+              "        const docLink = document.createElement('div');\n",
+              "        docLink.innerHTML = docLinkHtml;\n",
+              "        element.appendChild(docLink);\n",
+              "      }\n",
+              "    </script>\n",
+              "  </div>\n",
+              "\n",
+              "\n",
+              "  <div id=\"id_8fa9a316-c496-4385-b600-90893417dfe4\">\n",
+              "    <style>\n",
+              "      .colab-df-generate {\n",
+              "        background-color: #E8F0FE;\n",
+              "        border: none;\n",
+              "        border-radius: 50%;\n",
+              "        cursor: pointer;\n",
+              "        display: none;\n",
+              "        fill: #1967D2;\n",
+              "        height: 32px;\n",
+              "        padding: 0 0 0 0;\n",
+              "        width: 32px;\n",
+              "      }\n",
+              "\n",
+              "      .colab-df-generate:hover {\n",
+              "        background-color: #E2EBFA;\n",
+              "        box-shadow: 0px 1px 2px rgba(60, 64, 67, 0.3), 0px 1px 3px 1px rgba(60, 64, 67, 0.15);\n",
+              "        fill: #174EA6;\n",
+              "      }\n",
+              "\n",
+              "      [theme=dark] .colab-df-generate {\n",
+              "        background-color: #3B4455;\n",
+              "        fill: #D2E3FC;\n",
+              "      }\n",
+              "\n",
+              "      [theme=dark] .colab-df-generate:hover {\n",
+              "        background-color: #434B5C;\n",
+              "        box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.15);\n",
+              "        filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.3));\n",
+              "        fill: #FFFFFF;\n",
+              "      }\n",
+              "    </style>\n",
+              "    <button class=\"colab-df-generate\" onclick=\"generateWithVariable('df_relatorio_salarial')\"\n",
+              "            title=\"Generate code using this dataframe.\"\n",
+              "            style=\"display:none;\">\n",
+              "\n",
+              "  <svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24px\"viewBox=\"0 0 24 24\"\n",
+              "       width=\"24px\">\n",
+              "    <path d=\"M7,19H8.4L18.45,9,17,7.55,7,17.6ZM5,21V16.75L18.45,3.32a2,2,0,0,1,2.83,0l1.4,1.43a1.91,1.91,0,0,1,.58,1.4,1.91,1.91,0,0,1-.58,1.4L9.25,21ZM18.45,9,17,7.55Zm-12,3A5.31,5.31,0,0,0,4.9,8.1,5.31,5.31,0,0,0,1,6.5,5.31,5.31,0,0,0,4.9,4.9,5.31,5.31,0,0,0,6.5,1,5.31,5.31,0,0,0,8.1,4.9,5.31,5.31,0,0,0,12,6.5,5.46,5.46,0,0,0,6.5,12Z\"/>\n",
+              "  </svg>\n",
+              "    </button>\n",
+              "    <script>\n",
+              "      (() => {\n",
+              "      const buttonEl =\n",
+              "        document.querySelector('#id_8fa9a316-c496-4385-b600-90893417dfe4 button.colab-df-generate');\n",
+              "      buttonEl.style.display =\n",
+              "        google.colab.kernel.accessAllowed ? 'block' : 'none';\n",
+              "\n",
+              "      buttonEl.onclick = () => {\n",
+              "        google.colab.notebook.generateWithVariable('df_relatorio_salarial');\n",
+              "      }\n",
+              "      })();\n",
+              "    </script>\n",
+              "  </div>\n",
+              "\n",
+              "    </div>\n",
+              "  </div>\n"
+            ],
+            "application/vnd.google.colaboratory.intrinsic+json": {
+              "type": "dataframe",
+              "variable_name": "df_relatorio_salarial",
+              "summary": "{\n  \"name\": \"df_relatorio_salarial\",\n  \"rows\": 1,\n  \"fields\": [\n    {\n      \"column\": \"cargo\",\n      \"properties\": {\n        \"dtype\": \"string\",\n        \"num_unique_values\": 1,\n        \"samples\": [\n          \"Desenvolvedor J\\u00fanior\"\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    },\n    {\n      \"column\": \"media_salario\",\n      \"properties\": {\n        \"dtype\": \"number\",\n        \"std\": null,\n        \"min\": 5500.0,\n        \"max\": 5500.0,\n        \"num_unique_values\": 1,\n        \"samples\": [\n          5500.0\n        ],\n        \"semantic_type\": \"\",\n        \"description\": \"\"\n      }\n    }\n  ]\n}"
+            }
+          },
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "# **Nível 3: Avançado — ORM (Orientação a Objetos e Relacionamentos)**"
+      ],
+      "metadata": {
+        "id": "KJ_509OmutYa"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "**Passo 1: Transforme as tabelas em classes Python. Utilize declarative_base() e defina as classes Departamento e FuncionarioORM mapeando as colunas com mapped_column.**"
+      ],
+      "metadata": {
+        "id": "0L-ShmANu0ar"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "!pip install sqlalchemy -q\n",
+        "\n",
+        "from sqlalchemy import create_engine, ForeignKey, select\n",
+        "from sqlalchemy.orm import (\n",
+        "    declarative_base,\n",
+        "    mapped_column,\n",
+        "    Mapped,\n",
+        "    relationship,\n",
+        "    sessionmaker\n",
+        ")\n",
+        "\n",
+        "engine = create_engine(\"sqlite:///sistema_rh.db\", echo=True)\n",
+        "\n",
+        "Base = declarative_base()\n",
+        "\n",
+        "\n",
+        "class Departamento(Base):\n",
+        "    __tablename__ = \"departamentos\"\n",
+        "\n",
+        "    id: Mapped[int] = mapped_column(primary_key=True)\n",
+        "    nome: Mapped[str] = mapped_column()\n",
+        "\n",
+        "    funcionarios: Mapped[list[\"FuncionarioORM\"]] = relationship(\n",
+        "        back_populates=\"departamento\"\n",
+        "    )\n",
+        "\n",
+        "\n",
+        "class FuncionarioORM(Base):\n",
+        "    __tablename__ = \"funcionarios_orm\"\n",
+        "\n",
+        "    id: Mapped[int] = mapped_column(primary_key=True)\n",
+        "    nome: Mapped[str] = mapped_column()\n",
+        "    cargo: Mapped[str] = mapped_column()\n",
+        "    salario: Mapped[float] = mapped_column()\n",
+        "\n",
+        "    departamento_id: Mapped[int] = mapped_column(\n",
+        "        ForeignKey(\"departamentos.id\")\n",
+        "    )\n",
+        "\n",
+        "    departamento: Mapped[Departamento] = relationship(\n",
+        "        back_populates=\"funcionarios\"\n",
+        "    )\n",
+        "\n",
+        "\n",
+        "Base.metadata.create_all(engine)\n",
+        "\n",
+        "Session = sessionmaker(bind=engine)\n",
+        "\n",
+        "sessao = Session()\n",
+        "\n",
+        "departamento_ti = Departamento(\n",
+        "    nome=\"TI\"\n",
+        ")\n",
+        "\n",
+        "funcionario1 = FuncionarioORM(\n",
+        "    nome=\"João Silva\",\n",
+        "    cargo=\"Desenvolvedor\",\n",
+        "    salario=5000.00\n",
+        ")\n",
+        "\n",
+        "funcionario2 = FuncionarioORM(\n",
+        "    nome=\"Maria Souza\",\n",
+        "    cargo=\"Analista de Sistemas\",\n",
+        "    salario=4500.00\n",
+        ")\n",
+        "\n",
+        "funcionario3 = FuncionarioORM(\n",
+        "    nome=\"Carlos Oliveira\",\n",
+        "    cargo=\"Desenvolvedor Júnior\",\n",
+        "    salario=3500.00\n",
+        ")\n",
+        "\n",
+        "departamento_ti.funcionarios.append(funcionario1)\n",
+        "departamento_ti.funcionarios.append(funcionario2)\n",
+        "departamento_ti.funcionarios.append(funcionario3)\n",
+        "\n",
+        "sessao.add(departamento_ti)\n",
+        "\n",
+        "sessao.commit()\n",
+        "\n",
+        "consulta = (\n",
+        "    select(FuncionarioORM)\n",
+        "    .join(FuncionarioORM.departamento)\n",
+        "    .where(Departamento.nome == \"TI\")\n",
+        ")\n",
+        "\n",
+        "funcionarios_ti = sessao.execute(\n",
+        "    consulta\n",
+        ").scalars().all()\n",
+        "\n",
+        "for funcionario in funcionarios_ti:\n",
+        "    print(\n",
+        "        f\"Nome: {funcionario.nome} | \"\n",
+        "        f\"Cargo: {funcionario.cargo} | \"\n",
+        "        f\"Salário: R$ {funcionario.salario:.2f} | \"\n",
+        "        f\"Departamento: {funcionario.departamento.nome}\"\n",
+        "    )\n",
+        "\n",
+        "sessao.close()\n"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "myIVoTnUuxQK",
+        "outputId": "521005a4-0b94-46de-e8db-3887480c92f8"
+      },
+      "execution_count": 18,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "2026-09-24 23:26:08,542 INFO sqlalchemy.engine.Engine BEGIN (implicit)\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "INFO:sqlalchemy.engine.Engine:BEGIN (implicit)\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "2026-09-24 23:26:08,545 INFO sqlalchemy.engine.Engine PRAGMA main.table_info(\"departamentos\")\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "INFO:sqlalchemy.engine.Engine:PRAGMA main.table_info(\"departamentos\")\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "2026-09-24 23:26:08,547 INFO sqlalchemy.engine.Engine [raw sql] ()\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "INFO:sqlalchemy.engine.Engine:[raw sql] ()\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "2026-09-24 23:26:08,550 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info(\"departamentos\")\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "INFO:sqlalchemy.engine.Engine:PRAGMA temp.table_info(\"departamentos\")\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "2026-09-24 23:26:08,553 INFO sqlalchemy.engine.Engine [raw sql] ()\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "INFO:sqlalchemy.engine.Engine:[raw sql] ()\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "2026-09-24 23:26:08,554 INFO sqlalchemy.engine.Engine PRAGMA main.table_info(\"funcionarios_orm\")\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "INFO:sqlalchemy.engine.Engine:PRAGMA main.table_info(\"funcionarios_orm\")\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "2026-09-24 23:26:08,556 INFO sqlalchemy.engine.Engine [raw sql] ()\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "INFO:sqlalchemy.engine.Engine:[raw sql] ()\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "2026-09-24 23:26:08,558 INFO sqlalchemy.engine.Engine PRAGMA temp.table_info(\"funcionarios_orm\")\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "INFO:sqlalchemy.engine.Engine:PRAGMA temp.table_info(\"funcionarios_orm\")\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "2026-09-24 23:26:08,560 INFO sqlalchemy.engine.Engine [raw sql] ()\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "INFO:sqlalchemy.engine.Engine:[raw sql] ()\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "2026-09-24 23:26:08,563 INFO sqlalchemy.engine.Engine \n",
+            "CREATE TABLE departamentos (\n",
+            "\tid INTEGER NOT NULL, \n",
+            "\tnome VARCHAR NOT NULL, \n",
+            "\tPRIMARY KEY (id)\n",
+            ")\n",
+            "\n",
+            "\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "INFO:sqlalchemy.engine.Engine:\n",
+            "CREATE TABLE departamentos (\n",
+            "\tid INTEGER NOT NULL, \n",
+            "\tnome VARCHAR NOT NULL, \n",
+            "\tPRIMARY KEY (id)\n",
+            ")\n",
+            "\n",
+            "\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "2026-09-24 23:26:08,565 INFO sqlalchemy.engine.Engine [no key 0.00282s] ()\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "INFO:sqlalchemy.engine.Engine:[no key 0.00282s] ()\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "2026-09-24 23:26:08,582 INFO sqlalchemy.engine.Engine \n",
+            "CREATE TABLE funcionarios_orm (\n",
+            "\tid INTEGER NOT NULL, \n",
+            "\tnome VARCHAR NOT NULL, \n",
+            "\tcargo VARCHAR NOT NULL, \n",
+            "\tsalario FLOAT NOT NULL, \n",
+            "\tdepartamento_id INTEGER NOT NULL, \n",
+            "\tPRIMARY KEY (id), \n",
+            "\tFOREIGN KEY(departamento_id) REFERENCES departamentos (id)\n",
+            ")\n",
+            "\n",
+            "\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "INFO:sqlalchemy.engine.Engine:\n",
+            "CREATE TABLE funcionarios_orm (\n",
+            "\tid INTEGER NOT NULL, \n",
+            "\tnome VARCHAR NOT NULL, \n",
+            "\tcargo VARCHAR NOT NULL, \n",
+            "\tsalario FLOAT NOT NULL, \n",
+            "\tdepartamento_id INTEGER NOT NULL, \n",
+            "\tPRIMARY KEY (id), \n",
+            "\tFOREIGN KEY(departamento_id) REFERENCES departamentos (id)\n",
+            ")\n",
+            "\n",
+            "\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "2026-09-24 23:26:08,583 INFO sqlalchemy.engine.Engine [no key 0.00116s] ()\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "INFO:sqlalchemy.engine.Engine:[no key 0.00116s] ()\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "2026-09-24 23:26:08,595 INFO sqlalchemy.engine.Engine COMMIT\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "INFO:sqlalchemy.engine.Engine:COMMIT\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "2026-09-24 23:26:08,605 INFO sqlalchemy.engine.Engine BEGIN (implicit)\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "INFO:sqlalchemy.engine.Engine:BEGIN (implicit)\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "2026-09-24 23:26:08,608 INFO sqlalchemy.engine.Engine INSERT INTO departamentos (nome) VALUES (?)\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "INFO:sqlalchemy.engine.Engine:INSERT INTO departamentos (nome) VALUES (?)\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "2026-09-24 23:26:08,611 INFO sqlalchemy.engine.Engine [generated in 0.00275s] ('TI',)\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "INFO:sqlalchemy.engine.Engine:[generated in 0.00275s] ('TI',)\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "2026-09-24 23:26:08,618 INFO sqlalchemy.engine.Engine INSERT INTO funcionarios_orm (nome, cargo, salario, departamento_id) VALUES (?, ?, ?, ?) RETURNING id\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "INFO:sqlalchemy.engine.Engine:INSERT INTO funcionarios_orm (nome, cargo, salario, departamento_id) VALUES (?, ?, ?, ?) RETURNING id\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "2026-09-24 23:26:08,620 INFO sqlalchemy.engine.Engine [generated in 0.00022s (insertmanyvalues) 1/3 (ordered; batch not supported)] ('João Silva', 'Desenvolvedor', 5000.0, 1)\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "INFO:sqlalchemy.engine.Engine:[generated in 0.00022s (insertmanyvalues) 1/3 (ordered; batch not supported)] ('João Silva', 'Desenvolvedor', 5000.0, 1)\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "2026-09-24 23:26:08,623 INFO sqlalchemy.engine.Engine INSERT INTO funcionarios_orm (nome, cargo, salario, departamento_id) VALUES (?, ?, ?, ?) RETURNING id\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "INFO:sqlalchemy.engine.Engine:INSERT INTO funcionarios_orm (nome, cargo, salario, departamento_id) VALUES (?, ?, ?, ?) RETURNING id\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "2026-09-24 23:26:08,625 INFO sqlalchemy.engine.Engine [insertmanyvalues 2/3 (ordered; batch not supported)] ('Maria Souza', 'Analista de Sistemas', 4500.0, 1)\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "INFO:sqlalchemy.engine.Engine:[insertmanyvalues 2/3 (ordered; batch not supported)] ('Maria Souza', 'Analista de Sistemas', 4500.0, 1)\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "2026-09-24 23:26:08,629 INFO sqlalchemy.engine.Engine INSERT INTO funcionarios_orm (nome, cargo, salario, departamento_id) VALUES (?, ?, ?, ?) RETURNING id\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "INFO:sqlalchemy.engine.Engine:INSERT INTO funcionarios_orm (nome, cargo, salario, departamento_id) VALUES (?, ?, ?, ?) RETURNING id\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "2026-09-24 23:26:08,631 INFO sqlalchemy.engine.Engine [insertmanyvalues 3/3 (ordered; batch not supported)] ('Carlos Oliveira', 'Desenvolvedor Júnior', 3500.0, 1)\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "INFO:sqlalchemy.engine.Engine:[insertmanyvalues 3/3 (ordered; batch not supported)] ('Carlos Oliveira', 'Desenvolvedor Júnior', 3500.0, 1)\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "2026-09-24 23:26:08,634 INFO sqlalchemy.engine.Engine COMMIT\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "INFO:sqlalchemy.engine.Engine:COMMIT\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "2026-09-24 23:26:08,645 INFO sqlalchemy.engine.Engine BEGIN (implicit)\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "INFO:sqlalchemy.engine.Engine:BEGIN (implicit)\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "2026-09-24 23:26:08,648 INFO sqlalchemy.engine.Engine SELECT funcionarios_orm.id, funcionarios_orm.nome, funcionarios_orm.cargo, funcionarios_orm.salario, funcionarios_orm.departamento_id \n",
+            "FROM funcionarios_orm JOIN departamentos ON departamentos.id = funcionarios_orm.departamento_id \n",
+            "WHERE departamentos.nome = ?\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "INFO:sqlalchemy.engine.Engine:SELECT funcionarios_orm.id, funcionarios_orm.nome, funcionarios_orm.cargo, funcionarios_orm.salario, funcionarios_orm.departamento_id \n",
+            "FROM funcionarios_orm JOIN departamentos ON departamentos.id = funcionarios_orm.departamento_id \n",
+            "WHERE departamentos.nome = ?\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "2026-09-24 23:26:08,651 INFO sqlalchemy.engine.Engine [generated in 0.00329s] ('TI',)\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "INFO:sqlalchemy.engine.Engine:[generated in 0.00329s] ('TI',)\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "2026-09-24 23:26:08,658 INFO sqlalchemy.engine.Engine SELECT departamentos.id AS departamentos_id, departamentos.nome AS departamentos_nome \n",
+            "FROM departamentos \n",
+            "WHERE departamentos.id = ?\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "INFO:sqlalchemy.engine.Engine:SELECT departamentos.id AS departamentos_id, departamentos.nome AS departamentos_nome \n",
+            "FROM departamentos \n",
+            "WHERE departamentos.id = ?\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "2026-09-24 23:26:08,660 INFO sqlalchemy.engine.Engine [generated in 0.00206s] (1,)\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "INFO:sqlalchemy.engine.Engine:[generated in 0.00206s] (1,)\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Nome: João Silva | Cargo: Desenvolvedor | Salário: R$ 5000.00 | Departamento: TI\n",
+            "Nome: Maria Souza | Cargo: Analista de Sistemas | Salário: R$ 4500.00 | Departamento: TI\n",
+            "Nome: Carlos Oliveira | Cargo: Desenvolvedor Júnior | Salário: R$ 3500.00 | Departamento: TI\n",
+            "2026-09-24 23:26:08,663 INFO sqlalchemy.engine.Engine ROLLBACK\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "INFO:sqlalchemy.engine.Engine:ROLLBACK\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [],
+      "metadata": {
+        "id": "lvNiKcRqvPA-"
+      },
+      "execution_count": null,
+      "outputs": []
+    }
+  ]
+}
